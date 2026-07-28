@@ -73,12 +73,17 @@ const workouts: Workout[] = [
 ];
 
 const key = "lift-log-v1";
+const cloudKey = "lift-log-cloud-key";
+const cloudApi = "https://api.17design.fun";
 
 export default function Home() {
   const [view, setView] = useState<"home" | "training">("home");
   const [active, setActive] = useState("a");
   const [done, setDone] = useState<Record<string, boolean>>({});
   const [week, setWeek] = useState<Record<string, boolean>>({});
+  const [syncKey, setSyncKey] = useState("");
+  const [cloudConnected, setCloudConnected] = useState(false);
+  const [syncStatus, setSyncStatus] = useState("本机保存");
 
   useEffect(() => {
     const saved = localStorage.getItem(key);
@@ -87,11 +92,47 @@ export default function Home() {
       setDone(parsed.done ?? {});
       setWeek(parsed.week ?? {});
     }
+    const savedSyncKey = localStorage.getItem(cloudKey);
+    if (savedSyncKey) {
+      setSyncKey(savedSyncKey);
+      setCloudConnected(true);
+      setSyncStatus("等待同步");
+    }
   }, []);
 
   useEffect(() => {
     localStorage.setItem(key, JSON.stringify({ done, week }));
   }, [done, week]);
+
+  useEffect(() => {
+    if (!cloudConnected || !syncKey) return;
+    const timeout = window.setTimeout(async () => {
+      try {
+        const response = await fetch(`${cloudApi}/api/progress`, { method: "PUT", headers: { "Content-Type": "application/json", "x-lift-key": syncKey }, body: JSON.stringify({ payload: { done, week } }) });
+        setSyncStatus(response.ok ? "已同步到云端" : "同步失败");
+      } catch {
+        setSyncStatus("网络未连接");
+      }
+    }, 600);
+    return () => window.clearTimeout(timeout);
+  }, [done, week, cloudConnected, syncKey]);
+
+  const connectCloud = async () => {
+    if (!syncKey.trim()) return;
+    setSyncStatus("正在连接");
+    try {
+      const response = await fetch(`${cloudApi}/api/progress`, { headers: { "x-lift-key": syncKey.trim() } });
+      if (!response.ok) throw new Error("Unauthorized");
+      const data = await response.json() as { payload: { done: Record<string, boolean>; week: Record<string, boolean> } | null };
+      if (data.payload) { setDone(data.payload.done ?? {}); setWeek(data.payload.week ?? {}); }
+      localStorage.setItem(cloudKey, syncKey.trim());
+      setCloudConnected(true);
+      setSyncStatus(data.payload ? "已从云端恢复" : "已连接云端");
+    } catch {
+      setCloudConnected(false);
+      setSyncStatus("连接失败，请检查密钥");
+    }
+  };
 
   const workout = useMemo(() => workouts.find((item) => item.id === active)!, [active]);
   const completed = workout.exercises.filter((_, index) => done[`${active}-${index}`]).length;
@@ -197,6 +238,15 @@ export default function Home() {
       <section className="rules-panel">
         <p>LOAD RULE: 每组达到最高次数、姿势稳定、仍有 2 次余力 → 下次加 0.5–1kg。</p>
         <p>REST: 大动作 2–3 分钟；小动作 60–90 秒。前两周若刚开始训练，每个动作可先做 2 组。</p>
+      </section>
+
+      <section className="sync-panel" aria-label="云端同步">
+        <div><p className="eyebrow">// CLOUD SYNC</p><strong>{syncStatus}</strong></div>
+        <p>连接后训练进度会同步到你的云端；密钥只保存在当前设备。</p>
+        <div className="sync-form">
+          <input type="password" value={syncKey} onChange={(event) => setSyncKey(event.target.value)} placeholder="粘贴你的同步密钥" aria-label="同步密钥" />
+          <button onClick={connectCloud}>{cloudConnected ? "重新连接" : "连接云端"}</button>
+        </div>
       </section>
     </main>
   );
