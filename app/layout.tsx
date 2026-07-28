@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LIFT.LOG — 阿Jay 的力量打卡",
-  description: "一个手机优先的四日哑铃力量训练打卡页。",
+  title: "17DESIGN.FUN — 阿Jay 的个人工具站",
+  description: "阿Jay 的个人工具站，包含四日哑铃力量训练打卡等实用功能。",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

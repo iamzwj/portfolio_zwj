@@ -75,6 +75,7 @@ const workouts: Workout[] = [
 const key = "lift-log-v1";
 
 export default function Home() {
+  const [view, setView] = useState<"home" | "training">("home");
   const [active, setActive] = useState("a");
   const [done, setDone] = useState<Record<string, boolean>>({});
   const [week, setWeek] = useState<Record<string, boolean>>({});
@@ -102,10 +103,48 @@ export default function Home() {
     setWeek((previous) => ({ ...previous, [active]: false }));
   };
 
+  if (view === "home") {
+    return (
+      <main className="home-shell">
+        <div className="scanlines" aria-hidden="true" />
+        <header className="home-nav">
+          <a className="brand" href="/" aria-label="17design.fun 首页">17<span>DESIGN</span>.FUN</a>
+          <button className="nav-action" onClick={() => setView("training")}>打开工具 →</button>
+        </header>
+
+        <section className="home-hero">
+          <p className="eyebrow">// JAY'S PERSONAL TOOLBOX</p>
+          <h1>把生活<br /><em>做成系统。</em></h1>
+          <p>一个为阿Jay持续生长的个人工具站。把真正会用到的小功能，整理成简单、稳定的入口。</p>
+        </section>
+
+        <section className="tool-grid" aria-label="功能入口">
+          <button className="tool-card active-tool" onClick={() => setView("training")}>
+            <span className="tool-index">01 / ACTIVE</span>
+            <strong>LIFT.LOG</strong>
+            <b>力量训练打卡</b>
+            <p>四日哑铃计划、动作提示与每周进度，一次打开直接训练。</p>
+            <i>进入训练 →</i>
+          </button>
+          <article className="tool-card coming-tool">
+            <span className="tool-index">02 / NEXT</span>
+            <strong>MORE TOOLS</strong>
+            <b>新的功能放这里</b>
+            <p>以后每个小功能独立成模块，不影响已有工具的速度和结构。</p>
+            <i>COMING SOON</i>
+          </article>
+        </section>
+
+        <footer className="home-footer">17DESIGN.FUN / PERSONAL SYSTEMS</footer>
+      </main>
+    );
+  }
+
   return (
     <main className="terminal-shell">
       <div className="scanlines" aria-hidden="true" />
       <header className="topbar">
+        <button className="back-home" onClick={() => setView("home")}>← 主页</button>
         <p className="prompt">JAY@TRAINING:~$ <span>OPEN LIFT.LOG</span><b>█</b></p>
         <p className="status">SYSTEM: READY · 4-DAY STRENGTH</p>
       </header>
