@@ -19,7 +19,7 @@ jobs:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
       DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-      DEPLOY_SSH_FINGERPRINT: ${{ secrets.DEPLOY_SSH_FINGERPRINT }}
+      DEPLOY_SSH_KNOWN_HOST: ${{ secrets.DEPLOY_SSH_KNOWN_HOST }}
       RELEASE_DIR: /tmp/portfolio-zwj-release-${{ github.sha }}
       APP_DIR: /opt/portfolio-zwj
 
@@ -39,7 +39,7 @@ jobs:
       - name: Check deployment configuration
         id: deployment_config
         run: |
-          if [ -n "$DEPLOY_HOST" ] && [ -n "$DEPLOY_USER" ] && [ -n "$DEPLOY_SSH_KEY" ] && [ -n "$DEPLOY_SSH_FINGERPRINT" ]; then
+          if [ -n "$DEPLOY_HOST" ] && [ -n "$DEPLOY_USER" ] && [ -n "$DEPLOY_SSH_KEY" ] && [ -n "$DEPLOY_SSH_KNOWN_HOST" ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
@@ -49,36 +49,39 @@ jobs:
         if: steps.deployment_config.outputs.ready != 'true'
         run: echo 'Build passed. Add the deployment secrets to enable Tencent Cloud releases.'
 
+      - name: Configure pinned SSH host key
+        if: steps.deployment_config.outputs.ready == 'true'
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_SSH_KNOWN_HOST" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
       - name: Upload release
         if: steps.deployment_config.outputs.ready == 'true'
-        uses: appleboy/scp-action@v1
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          fingerprint: ${{ secrets.DEPLOY_SSH_FINGERPRINT }}
-          source: "."
-          target: "/tmp/portfolio-zwj-release-${{ github.sha }}"
-          rm: true
-          overwrite: true
+        run: |
+          tar --exclude=.git --exclude=node_modules --exclude=dist --exclude=.wrangler \
+            -czf /tmp/portfolio-zwj-release.tar.gz .
+          scp -i ~/.ssh/id_ed25519 /tmp/portfolio-zwj-release.tar.gz \
+            "$DEPLOY_USER@$DEPLOY_HOST:/tmp/portfolio-zwj-release-${{ github.sha }}.tar.gz"
 
       - name: Build and restart on Tencent Cloud
         if: steps.deployment_config.outputs.ready == 'true'
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          fingerprint: ${{ secrets.DEPLOY_SSH_FINGERPRINT }}
-          script_stop: true
-          command_timeout: 10m
-          script: |
-            set -eu
-            sudo install -d -m 0755 -o "$USER" -g "$USER" /opt/portfolio-zwj
-            rsync -a --delete --exclude='.git' /tmp/portfolio-zwj-release-${{ github.sha }}/ /opt/portfolio-zwj/
-            cd /opt/portfolio-zwj
-            "$HOME/.local/node-v22/bin/npm" ci
-            "$HOME/.local/node-v22/bin/npm" run build
-            sudo systemctl restart portfolio-zwj
-            sudo systemctl is-active --quiet portfolio-zwj
-            rm -rf /tmp/portfolio-zwj-release-${{ github.sha }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "$DEPLOY_USER@$DEPLOY_HOST" <<'REMOTE'
+          set -eu
+          release_dir="/tmp/portfolio-zwj-release-${{ github.sha }}"
+          archive="${release_dir}.tar.gz"
+          sudo rm -rf "$release_dir"
+          sudo install -d -m 0755 -o "$USER" -g "$(id -gn)" "$release_dir" /opt/portfolio-zwj
+          sudo tar -xzf "$archive" -C "$release_dir"
+          sudo chown -R "$USER:$(id -gn)" "$release_dir"
+          rsync -a --delete --exclude='.git' "$release_dir/" /opt/portfolio-zwj/
+          cd /opt/portfolio-zwj
+          "$HOME/.local/node-v22/bin/npm" ci
+          "$HOME/.local/node-v22/bin/npm" run build
+          sudo systemctl restart portfolio-zwj
+          sudo systemctl is-active --quiet portfolio-zwj
+          rm -rf "$release_dir" "$archive"
+          REMOTE

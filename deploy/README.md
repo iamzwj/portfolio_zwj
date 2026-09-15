@@ -27,7 +27,7 @@ and add these repository secrets:
 | `DEPLOY_HOST` | `49.235.121.231` |
 | `DEPLOY_USER` | The Linux deployment username, normally `ubuntu` |
 | `DEPLOY_SSH_KEY` | The private key for the dedicated deployment keypair |
-| `DEPLOY_SSH_FINGERPRINT` | The server ED25519 SSH host-key fingerprint |
+| `DEPLOY_SSH_KNOWN_HOST` | The pinned server host-key line in OpenSSH `known_hosts` format |
 
 After the first successful setup, every push to `main` runs the deployment
 workflow automatically. A manual run is also available from the repository's
