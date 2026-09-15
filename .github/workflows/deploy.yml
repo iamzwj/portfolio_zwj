@@ -28,7 +28,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Verify production build
@@ -77,8 +77,8 @@ jobs:
             sudo install -d -m 0755 -o "$USER" -g "$USER" /opt/portfolio-zwj
             rsync -a --delete --exclude='.git' /tmp/portfolio-zwj-release-${{ github.sha }}/ /opt/portfolio-zwj/
             cd /opt/portfolio-zwj
-            npm ci
-            npm run build
+            "$HOME/.local/node-v22/bin/npm" ci
+            "$HOME/.local/node-v22/bin/npm" run build
             sudo systemctl restart portfolio-zwj
             sudo systemctl is-active --quiet portfolio-zwj
             rm -rf /tmp/portfolio-zwj-release-${{ github.sha }}

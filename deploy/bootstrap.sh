@@ -11,20 +11,27 @@ APP_DIR="/opt/portfolio-zwj"
 APP_PORT="3001"
 DEPLOY_USER="${SUDO_USER:-$USER}"
 DEPLOY_GROUP="$(id -gn "$DEPLOY_USER")"
-NPM_BIN="$(command -v npm || true)"
+NODE_VERSION="22.13.1"
+NODE_DIR="/home/${DEPLOY_USER}/.local/node-v22"
+NPM_BIN="${NODE_DIR}/bin/npm"
 
 if [[ $EUID -ne 0 ]]; then
   echo "Run this script with sudo."
   exit 1
 fi
 
-if [[ -z "$NPM_BIN" ]]; then
-  echo "Node.js and npm must be installed before configuring the service."
-  exit 1
-fi
-
 apt-get update
-apt-get install -y nginx certbot python3-certbot-nginx rsync
+apt-get install -y nginx certbot python3-certbot-nginx rsync curl xz-utils
+
+# Keep the portfolio on Node 22 without changing the Node 20 runtime used by
+# the existing 17design service.
+if [[ ! -x "${NODE_DIR}/bin/node" ]] || [[ "$("${NODE_DIR}/bin/node" --version)" != "v${NODE_VERSION}" ]]; then
+  rm -rf "$NODE_DIR"
+  mkdir -p "$NODE_DIR"
+  curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" \
+    | tar -xJ --strip-components=1 -C "$NODE_DIR"
+  chown -R "$DEPLOY_USER:$DEPLOY_GROUP" "$(dirname "$NODE_DIR")"
+fi
 
 install -d -m 0755 -o "$DEPLOY_USER" -g "$DEPLOY_GROUP" "$APP_DIR"
 
