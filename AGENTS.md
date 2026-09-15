@@ -2,11 +2,11 @@
 
 ## Product
 
-17design.fun is Richart J (阿Jay)'s long-term personal design and tools website.
-The intended direction is a portfolio and personal hub for visual design, AI
-automation, websites, and applications. Keep the existing Lift Log strength
-training check-in as a small tool within the site rather than the entire
-homepage direction.
+17design.fun is Richart J (阿Jay)'s long-term personal design portfolio and
+personal hub for visual design, AIGC, AI automation, websites, and
+applications. Keep the homepage focused on Richart J's positioning, work,
+capabilities, story, and contact path. Do not reintroduce the former Lift Log
+strength-training tool unless the user explicitly requests it.
 
 ## Working Style
 

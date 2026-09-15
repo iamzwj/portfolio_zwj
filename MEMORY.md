@@ -2,12 +2,17 @@
 
 ## Current State
 
-- The project is a mobile-first Lift Log check-in app with a lightweight
-  17design personal-tools homepage.
-- Lift Log contains a four-day dumbbell strength plan and local check-in state.
-- Optional cloud sync stores training progress through `api.17design.fun`.
-  The API uses a user-entered sync secret; the actual secret exists only in the
-  server environment and must never be copied into the repository or chat.
+- The project is a mobile-first personal design portfolio for Richart J
+  (阿Jay), covering visual design, AIGC, AI automation, websites, and apps.
+- The former Lift Log training tool, its local state, and its cloud-sync UI
+  were intentionally removed in July 2026 to keep the project focused.
+- The current visual direction uses a restrained Cyberpunk / Glitch system:
+  dark neon tokens, chamfered panels, terminal details, scanlines, and
+  reduced-motion support on the personal homepage.
+- All website portfolio cases and derived web assets were intentionally removed
+  in July 2026 so the portfolio can be redesigned from a clean slate. The
+  original source files under the Desktop `Richart/作品集/作品集2025` folder
+  remain untouched.
 
 ## Infrastructure
 
@@ -20,10 +25,9 @@
 
 ## Direction
 
-The next larger product evolution is to make the main site a design portfolio
-and personal hub. Possible future additions include a user login system,
-PostgreSQL for application data, and object storage/CDN for media. Do not use
-the public website server as a personal password vault.
+The next step is to define a new portfolio structure and visual direction
+before rebuilding any case study. Add persistence, user accounts, or media
+infrastructure only when a real feature requires them.
 
 ## Deployment Note
 
