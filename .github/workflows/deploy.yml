@@ -1,0 +1,84 @@
+name: Deploy portfolio
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: portfolio-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_SSH_FINGERPRINT: ${{ secrets.DEPLOY_SSH_FINGERPRINT }}
+      RELEASE_DIR: /tmp/portfolio-zwj-release-${{ github.sha }}
+      APP_DIR: /opt/portfolio-zwj
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Verify production build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Check deployment configuration
+        id: deployment_config
+        run: |
+          if [ -n "$DEPLOY_HOST" ] && [ -n "$DEPLOY_USER" ] && [ -n "$DEPLOY_SSH_KEY" ] && [ -n "$DEPLOY_SSH_FINGERPRINT" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip server release until credentials are configured
+        if: steps.deployment_config.outputs.ready != 'true'
+        run: echo 'Build passed. Add the deployment secrets to enable Tencent Cloud releases.'
+
+      - name: Upload release
+        if: steps.deployment_config.outputs.ready == 'true'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          fingerprint: ${{ secrets.DEPLOY_SSH_FINGERPRINT }}
+          source: "."
+          target: "/tmp/portfolio-zwj-release-${{ github.sha }}"
+          rm: true
+          overwrite: true
+
+      - name: Build and restart on Tencent Cloud
+        if: steps.deployment_config.outputs.ready == 'true'
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          fingerprint: ${{ secrets.DEPLOY_SSH_FINGERPRINT }}
+          script_stop: true
+          command_timeout: 10m
+          script: |
+            set -eu
+            sudo install -d -m 0755 -o "$USER" -g "$USER" /opt/portfolio-zwj
+            rsync -a --delete --exclude='.git' /tmp/portfolio-zwj-release-${{ github.sha }}/ /opt/portfolio-zwj/
+            cd /opt/portfolio-zwj
+            npm ci
+            npm run build
+            sudo systemctl restart portfolio-zwj
+            sudo systemctl is-active --quiet portfolio-zwj
+            rm -rf /tmp/portfolio-zwj-release-${{ github.sha }}
