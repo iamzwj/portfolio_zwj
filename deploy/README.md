@@ -1,8 +1,9 @@
 # Tencent Cloud deployment
 
 This repository deploys `main` to `https://portfolio.17design.fun` through
-GitHub Actions. The pipeline validates the build, uploads the source to the
-server, builds there, and restarts only the `portfolio-zwj` systemd service.
+GitHub Actions. The pipeline validates the build, tells the server to pull the
+exact GitHub commit, builds there, and restarts only the `portfolio-zwj`
+systemd service.
 It does not touch the primary site or API.
 
 ## One-time server setup

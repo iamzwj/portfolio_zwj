@@ -21,7 +21,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 apt-get update
-apt-get install -y nginx certbot python3-certbot-nginx rsync curl xz-utils
+apt-get install -y nginx certbot python3-certbot-nginx git rsync curl xz-utils
 
 # Keep the portfolio on Node 22 without changing the Node 20 runtime used by
 # the existing 17design service.

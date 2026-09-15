@@ -20,8 +20,6 @@ jobs:
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
       DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
       DEPLOY_SSH_KNOWN_HOST: ${{ secrets.DEPLOY_SSH_KNOWN_HOST }}
-      RELEASE_DIR: /tmp/portfolio-zwj-release-${{ github.sha }}
-      APP_DIR: /opt/portfolio-zwj
 
     steps:
       - uses: actions/checkout@v4
@@ -58,30 +56,24 @@ jobs:
           printf '%s\n' "$DEPLOY_SSH_KNOWN_HOST" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Upload release
-        if: steps.deployment_config.outputs.ready == 'true'
-        run: |
-          tar --exclude=.git --exclude=node_modules --exclude=dist --exclude=.wrangler \
-            -czf /tmp/portfolio-zwj-release.tar.gz .
-          scp -i ~/.ssh/id_ed25519 /tmp/portfolio-zwj-release.tar.gz \
-            "$DEPLOY_USER@$DEPLOY_HOST:/tmp/portfolio-zwj-release-${{ github.sha }}.tar.gz"
-
-      - name: Build and restart on Tencent Cloud
+      - name: Pull, build and restart on Tencent Cloud
         if: steps.deployment_config.outputs.ready == 'true'
         run: |
           ssh -i ~/.ssh/id_ed25519 "$DEPLOY_USER@$DEPLOY_HOST" <<'REMOTE'
           set -eu
-          release_dir="/tmp/portfolio-zwj-release-${{ github.sha }}"
-          archive="${release_dir}.tar.gz"
-          sudo rm -rf "$release_dir"
-          sudo install -d -m 0755 -o "$USER" -g "$(id -gn)" "$release_dir" /opt/portfolio-zwj
-          sudo tar -xzf "$archive" -C "$release_dir"
-          sudo chown -R "$USER:$(id -gn)" "$release_dir"
-          rsync -a --delete --exclude='.git' "$release_dir/" /opt/portfolio-zwj/
-          cd /opt/portfolio-zwj
+          app_dir="/opt/portfolio-zwj"
+          release_sha="${{ github.sha }}"
+          if [ -d "$app_dir/.git" ]; then
+            git -C "$app_dir" fetch --depth=1 origin "$release_sha"
+          else
+            sudo install -d -m 0755 -o "$USER" -g "$(id -gn)" "$app_dir"
+            git clone --no-checkout https://github.com/iamzwj/portfolio_zwj.git "$app_dir"
+            git -C "$app_dir" fetch --depth=1 origin "$release_sha"
+          fi
+          git -C "$app_dir" checkout --detach --force "$release_sha"
+          cd "$app_dir"
           "$HOME/.local/node-v22/bin/npm" ci
           "$HOME/.local/node-v22/bin/npm" run build
           sudo systemctl restart portfolio-zwj
           sudo systemctl is-active --quiet portfolio-zwj
-          rm -rf "$release_dir" "$archive"
           REMOTE
