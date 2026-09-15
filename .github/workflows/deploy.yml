@@ -59,16 +59,16 @@ jobs:
       - name: Pull, build and restart on Tencent Cloud
         if: steps.deployment_config.outputs.ready == 'true'
         run: |
-          ssh -i ~/.ssh/id_ed25519 "$DEPLOY_USER@$DEPLOY_HOST" <<'REMOTE'
+          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -i ~/.ssh/id_ed25519 "$DEPLOY_USER@$DEPLOY_HOST" <<'REMOTE'
           set -eu
           app_dir="/opt/portfolio-zwj"
           release_sha="${{ github.sha }}"
           if ! git -C "$app_dir" rev-parse --verify HEAD >/dev/null 2>&1; then
             sudo rm -rf "$app_dir"
             sudo install -d -m 0755 -o "$USER" -g "$(id -gn)" "$app_dir"
-            git clone --depth=1 --branch main https://github.com/iamzwj/portfolio_zwj.git "$app_dir"
+            git clone --progress --depth=1 --branch main https://github.com/iamzwj/portfolio_zwj.git "$app_dir"
           else
-            git -C "$app_dir" fetch --depth=1 origin main
+            git -C "$app_dir" fetch --progress --depth=1 origin main
           fi
           git -C "$app_dir" checkout --detach --force "$release_sha"
           cd "$app_dir"
