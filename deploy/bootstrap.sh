@@ -47,6 +47,7 @@ Group=${DEPLOY_GROUP}
 WorkingDirectory=${APP_DIR}
 Environment=NODE_ENV=production
 Environment=PORT=${APP_PORT}
+Environment=PATH=${NODE_DIR}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ExecStart=${NPM_BIN} run start
 Restart=always
 RestartSec=5
