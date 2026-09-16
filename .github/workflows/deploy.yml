@@ -56,24 +56,35 @@ jobs:
           printf '%s\n' "$DEPLOY_SSH_KNOWN_HOST" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Pull, build and restart on Tencent Cloud
+      - name: Upload verified source bundle
+        if: steps.deployment_config.outputs.ready == 'true'
+        run: |
+          tar \
+            --exclude=.git \
+            --exclude=node_modules \
+            --exclude=.next \
+            --exclude=dist \
+            --exclude=.wrangler \
+            --exclude='.env*' \
+            -czf - . | ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -i ~/.ssh/id_ed25519 "$DEPLOY_USER@$DEPLOY_HOST" 'cat > /tmp/portfolio-zwj-release.tar.gz'
+
+      - name: Build and restart on Tencent Cloud
         if: steps.deployment_config.outputs.ready == 'true'
         run: |
           ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -i ~/.ssh/id_ed25519 "$DEPLOY_USER@$DEPLOY_HOST" <<'REMOTE'
           set -eu
           app_dir="/opt/portfolio-zwj"
-          release_sha="${{ github.sha }}"
-          if ! git -C "$app_dir" rev-parse --verify HEAD >/dev/null 2>&1; then
-            sudo rm -rf "$app_dir"
-            sudo install -d -m 0755 -o "$USER" -g "$(id -gn)" "$app_dir"
-            git clone --progress --depth=1 --branch main https://github.com/iamzwj/portfolio_zwj.git "$app_dir"
-          else
-            git -C "$app_dir" fetch --progress --depth=1 origin main
-          fi
-          git -C "$app_dir" checkout --detach --force "$release_sha"
-          cd "$app_dir"
+          release_dir="$(mktemp -d "$HOME/portfolio-zwj.XXXXXX")"
+          trap 'rm -rf "$release_dir" /tmp/portfolio-zwj-release.tar.gz' EXIT
+          tar -xzf /tmp/portfolio-zwj-release.tar.gz -C "$release_dir"
+          cd "$release_dir"
           "$HOME/.local/node-v22/bin/npm" ci
           "$HOME/.local/node-v22/bin/npm" run build
+          sudo rm -rf "$app_dir"
+          sudo mv "$release_dir" "$app_dir"
+          sudo chown -R "$USER:$(id -gn)" "$app_dir"
+          rm -f /tmp/portfolio-zwj-release.tar.gz
+          trap - EXIT
           sudo systemctl restart portfolio-zwj
           sudo systemctl is-active --quiet portfolio-zwj
           REMOTE
