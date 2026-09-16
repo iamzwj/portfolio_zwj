@@ -83,8 +83,9 @@ jobs:
             cp "$app_dir/public/hero-background.mp4" "$release_dir/public/hero-background.mp4"
           fi
           cd "$release_dir"
-          "$HOME/.local/node-v22/bin/npm" ci
-          "$HOME/.local/node-v22/bin/npm" run build
+          export PATH="$HOME/.local/node-v22/bin:$PATH"
+          npm ci
+          npm run build
           sudo rm -rf "$app_dir"
           sudo mv "$release_dir" "$app_dir"
           sudo chown -R "$USER:$(id -gn)" "$app_dir"
