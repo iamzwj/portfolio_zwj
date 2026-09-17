@@ -53,6 +53,7 @@ html {
 
 body {
   margin: 0;
+  overflow-x: clip;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace;
@@ -183,6 +184,7 @@ input {
 }
 
 .site-background-video,
+.site-video-poster,
 .site-video-overlay {
   position: fixed;
   z-index: 0;
@@ -199,6 +201,19 @@ input {
   filter: saturate(0.78) contrast(1.08) brightness(0.72);
   transform: scale(1.14);
   transform-origin: left center;
+}
+
+.site-video-poster {
+  background: url("/hero-background-poster.jpg") 50% center / cover no-repeat;
+  opacity: 0.8;
+  filter: saturate(0.78) contrast(1.08) brightness(0.72);
+  transform: scale(1.14);
+  transform-origin: left center;
+  transition: opacity 280ms ease-out;
+}
+
+.site-video-poster.is-hidden {
+  opacity: 0;
 }
 
 .site-video-overlay {
@@ -1362,6 +1377,32 @@ button:focus-visible {
 
   .site-footer > a {
     grid-column: 2;
+  }
+}
+
+@media (max-width: 639px) {
+  .glitch-title {
+    width: 100%;
+    font-size: clamp(50px, 17vw, 80px);
+    letter-spacing: -0.07em;
+  }
+
+  .site-background-video {
+    object-position: 62% center;
+    transform: scale(1.08);
+    transform-origin: center;
+  }
+
+  .site-video-poster {
+    background-position: 62% center;
+    transform: scale(1.08);
+    transform-origin: center;
+  }
+
+  .site-video-overlay {
+    background:
+      linear-gradient(90deg, rgb(10 10 15 / 88%) 0%, rgb(10 10 15 / 58%) 62%, rgb(10 10 15 / 28%) 100%),
+      linear-gradient(0deg, rgb(10 10 15 / 82%) 0%, rgb(10 10 15 / 20%) 100%);
   }
 }
 
